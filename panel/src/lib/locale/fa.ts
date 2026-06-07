@@ -1,0 +1,66 @@
+export const statusLabels: Record<string, string> = {
+  pending_review: "در انتظار بررسی",
+  pending: "در انتظار",
+  approved: "تأیید شده",
+  confirmed: "تأیید شده",
+  activated: "فعال",
+  completed: "تکمیل شده",
+  rejected: "رد شده",
+  preparing: "در حال آماده‌سازی",
+  ready_for_pickup: "آماده تحویل",
+  shipped: "ارسال شده",
+  new: "جدید",
+  under_review: "در حال بررسی",
+  interview: "مصاحبه",
+  hired: "استخدام شده",
+  open: "باز",
+  closed: "بسته",
+  holiday: "تعطیل",
+  maintenance: "تعمیرات",
+  delivered: "تحویل داده شده",
+  failed: "ناموفق",
+  pickup: "تحویل حضوری",
+  delivery: "ارسال",
+  active: "فعال",
+  inactive: "غیرفعال",
+  published: "منتشر شده",
+  draft: "پیش‌نویس",
+  yes: "بله",
+  no: "خیر",
+  in_stock: "موجود",
+  low_stock: "موجودی کم",
+  out_of_stock: "ناموجود",
+};
+
+export function statusLabel(status: string): string {
+  return statusLabels[status] ?? status;
+}
+
+export const common = {
+  edit: "ویرایش",
+  delete: "حذف",
+  save: "ذخیره تغییرات",
+  preview: "پیش‌نمایش",
+  add: "افزودن",
+  approve: "تأیید",
+  reject: "رد",
+  complete: "تکمیل",
+  notes: "یادداشت",
+  actions: "عملیات",
+  status: "وضعیت",
+  empty: "موردی یافت نشد.",
+  search: "جستجوی کاربران، سفارش‌ها، رزروها...",
+  logout: "خروج",
+  menu: "منو",
+  close: "بستن",
+  viewAll: "مشاهده همه",
+  exportExcel: "اکسل",
+  exportCsv: "CSV",
+};
+
+export const notificationTypes: Record<string, string> = {
+  membership: "عضویت",
+  reservation: "رزرو",
+  order: "سفارش",
+  recruitment: "استخدام",
+};
