@@ -1,0 +1,818 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum AdminRole {
+  super_admin
+  manager
+  content_manager
+  support_operator
+}
+
+enum Gender {
+  male
+  female
+  other
+}
+
+enum GymStatus {
+  open
+  closed
+  holiday
+  maintenance
+}
+
+enum MembershipStatus {
+  pending_review
+  approved
+  rejected
+  activated
+}
+
+enum ReservationStatus {
+  pending
+  confirmed
+  rejected
+  completed
+}
+
+enum ReservationServiceType {
+  massage
+  solarium
+}
+
+enum OrderStatus {
+  pending_review
+  approved
+  preparing
+  ready_for_pickup
+  shipped
+  completed
+  rejected
+}
+
+enum DeliveryType {
+  pickup
+  delivery
+}
+
+enum ApplicationStatus {
+  new
+  under_review
+  interview
+  rejected
+  hired
+}
+
+enum NotificationType {
+  membership
+  reservation
+  order
+  recruitment
+}
+
+enum VideoSource {
+  youtube
+  aparat
+  upload
+}
+
+enum SmsStatus {
+  delivered
+  failed
+  pending
+}
+
+enum AuditAction {
+  create
+  update
+  delete
+  approve
+  reject
+  activate
+  login
+  logout
+}
+
+// ─── Auth & Users ────────────────────────────────────────────────────────────
+
+model AdminUser {
+  id           String    @id @default(cuid())
+  username     String    @unique
+  passwordHash String
+  fullName     String
+  email        String?
+  role         AdminRole @default(manager)
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  refreshTokens AdminRefreshToken[]
+  auditLogs     AuditLog[]
+  notifications Notification[]      @relation("ReadByAdmin")
+
+  @@map("admin_users")
+}
+
+model AdminRefreshToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  adminId   String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  admin AdminUser @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@map("admin_refresh_tokens")
+}
+
+model User {
+  id        String    @id @default(cuid())
+  fullName  String?
+  mobile    String    @unique
+  gender    Gender?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  refreshTokens         UserRefreshToken[]
+  membershipRequests    MembershipRequest[]
+  reservations          Reservation[]
+  orders                Order[]
+  cart                  Cart?
+  recruitmentApps       RecruitmentApplication[]
+  consultationRequests  ConsultationRequest[]
+
+  @@map("users")
+}
+
+model UserRefreshToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_refresh_tokens")
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  mobile    String
+  code      String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([mobile])
+  @@map("otp_codes")
+}
+
+// ─── Content ─────────────────────────────────────────────────────────────────
+
+model LandingContent {
+  id           String   @id @default("default")
+  headline     String
+  subheadline  String
+  ctaPrimary   String
+  ctaSecondary String
+  featured     String?
+  updatedAt    DateTime @updatedAt
+
+  @@map("landing_content")
+}
+
+model AboutContent {
+  id       String   @id @default("default")
+  intro    String
+  history  String
+  mission  String
+  vision   String
+  updatedAt DateTime @updatedAt
+
+  @@map("about_content")
+}
+
+model GymStatusSetting {
+  id        String    @id @default("default")
+  status    GymStatus @default(open)
+  message   String?
+  updatedAt DateTime  @updatedAt
+
+  @@map("gym_status_settings")
+}
+
+model Achievement {
+  id          String    @id @default(cuid())
+  title       String
+  description String
+  category    String?
+  imageUrl    String?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@map("achievements")
+}
+
+model Coach {
+  id          String    @id @default(cuid())
+  name        String
+  position    String
+  biography   String?
+  specialty   String?
+  experience  String?
+  photoUrl    String?
+  instagram   String?
+  telegram    String?
+  isActive    Boolean   @default(true)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@map("coaches")
+}
+
+model Facility {
+  id          String    @id @default(cuid())
+  title       String
+  description String?
+  imageUrl    String?
+  videoUrl    String?
+  hasVideo    Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  @@map("facilities")
+}
+
+model Faq {
+  id        String    @id @default(cuid())
+  question  String
+  answer    String
+  category  String?
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("faqs")
+}
+
+// ─── Media ───────────────────────────────────────────────────────────────────
+
+model MediaFile {
+  id           String    @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+  createdAt    DateTime  @default(now())
+  deletedAt    DateTime?
+
+  @@map("media_files")
+}
+
+model GalleryItem {
+  id        String    @id @default(cuid())
+  title     String
+  category  String?
+  album     String?
+  imageUrl  String
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("gallery_items")
+}
+
+model Video {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  thumbnail   String?
+  source      VideoSource
+  sourceUrl   String
+  sortOrder   Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  deletedAt   DateTime?
+
+  @@map("videos")
+}
+
+// ─── Memberships ─────────────────────────────────────────────────────────────
+
+model MembershipPlan {
+  id           String    @id @default(cuid())
+  name         String
+  description  String?
+  durationDays Int
+  price        Int
+  isActive     Boolean   @default(true)
+  isPromotional Boolean  @default(false)
+  sortOrder    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  requests MembershipRequest[]
+
+  @@map("membership_plans")
+}
+
+model MembershipRequest {
+  id         String           @id @default(cuid())
+  userId     String
+  planId     String
+  receiptUrl String?
+  notes      String?
+  adminNotes String?
+  status     MembershipStatus @default(pending_review)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  deletedAt  DateTime?
+
+  user User           @relation(fields: [userId], references: [id])
+  plan MembershipPlan @relation(fields: [planId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@map("membership_requests")
+}
+
+// ─── Reservations ────────────────────────────────────────────────────────────
+
+model ReservationService {
+  id          String               @id @default(cuid())
+  name        String
+  type        ReservationServiceType @unique
+  price       Int
+  description String?
+  isActive    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  reservations Reservation[]
+
+  @@map("reservation_services")
+}
+
+model ReservationSchedule {
+  id           String   @id @default("default")
+  slotDuration Int      @default(30)
+  updatedAt    DateTime @updatedAt
+
+  workingDays WorkingDay[]
+  disabledDates DisabledDate[]
+
+  @@map("reservation_schedules")
+}
+
+model WorkingDay {
+  id         String  @id @default(cuid())
+  scheduleId String  @default("default")
+  dayOfWeek  Int
+  openTime   String
+  closeTime  String
+  isClosed   Boolean @default(false)
+
+  schedule ReservationSchedule @relation(fields: [scheduleId], references: [id])
+
+  @@unique([scheduleId, dayOfWeek])
+  @@map("working_days")
+}
+
+model DisabledDate {
+  id         String   @id @default(cuid())
+  scheduleId String   @default("default")
+  date       DateTime @db.Date
+  reason     String?
+
+  schedule ReservationSchedule @relation(fields: [scheduleId], references: [id])
+
+  @@unique([scheduleId, date])
+  @@map("disabled_dates")
+}
+
+model Reservation {
+  id          String            @id @default(cuid())
+  userId      String
+  serviceId   String
+  date        DateTime          @db.Date
+  timeSlot    String
+  receiptUrl  String?
+  notes       String?
+  adminNotes  String?
+  status      ReservationStatus @default(pending)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  deletedAt   DateTime?
+
+  user    User               @relation(fields: [userId], references: [id])
+  service ReservationService @relation(fields: [serviceId], references: [id])
+
+  @@index([userId])
+  @@index([date, timeSlot])
+  @@index([status])
+  @@map("reservations")
+}
+
+// ─── Store ───────────────────────────────────────────────────────────────────
+
+model StoreCategory {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  products Product[]
+
+  @@map("store_categories")
+}
+
+model Product {
+  id               String    @id @default(cuid())
+  name             String
+  slug             String    @unique
+  description      String?
+  sku              String    @unique
+  categoryId       String
+  featuredImageUrl String?
+  isActive         Boolean   @default(true)
+  lowStockThreshold Int      @default(5)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  category StoreCategory   @relation(fields: [categoryId], references: [id])
+  variants ProductVariant[]
+  images   ProductImage[]
+  cartItems CartItem[]
+  orderItems OrderItem[]
+
+  @@index([categoryId])
+  @@map("products")
+}
+
+model ProductVariant {
+  id            String    @id @default(cuid())
+  productId     String
+  name          String
+  sku           String    @unique
+  priceModifier Int       @default(0)
+  stock         Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  cartItems CartItem[]
+  orderItems OrderItem[]
+
+  @@index([productId])
+  @@map("product_variants")
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+// ─── Cart & Orders ───────────────────────────────────────────────────────────
+
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  productId String
+  variantId String?
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart    Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id])
+  variant ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@unique([cartId, productId, variantId])
+  @@map("cart_items")
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  userId          String
+  deliveryType    DeliveryType
+  address         String?
+  phone           String?
+  deliveryFee     Int         @default(0)
+  total           Int
+  receiptUrl      String?
+  notes           String?
+  adminNotes      String?
+  status          OrderStatus @default(pending_review)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  deletedAt       DateTime?
+
+  user  User        @relation(fields: [userId], references: [id])
+  items OrderItem[]
+
+  @@index([userId])
+  @@index([status])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  productId String
+  variantId String?
+  name      String
+  quantity  Int
+  unitPrice Int
+  total     Int
+
+  order   Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product         @relation(fields: [productId], references: [id])
+  variant ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@map("order_items")
+}
+
+// ─── Recruitment ─────────────────────────────────────────────────────────────
+
+model RecruitmentPosition {
+  id          String    @id @default(cuid())
+  title       String
+  department  String?
+  description String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  applications RecruitmentApplication[]
+
+  @@map("recruitment_positions")
+}
+
+model RecruitmentApplication {
+  id          String            @id @default(cuid())
+  userId      String?
+  fullName    String
+  mobile      String
+  positionId  String
+  description String?
+  resumeUrl   String?
+  adminNotes  String?
+  status      ApplicationStatus @default(new)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  deletedAt   DateTime?
+
+  user     User?               @relation(fields: [userId], references: [id])
+  position RecruitmentPosition @relation(fields: [positionId], references: [id])
+
+  @@index([status])
+  @@map("recruitment_applications")
+}
+
+// ─── Blog ────────────────────────────────────────────────────────────────────
+
+model BlogCategory {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  articles BlogArticle[]
+
+  @@map("blog_categories")
+}
+
+model BlogTag {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  articles BlogArticleTag[]
+
+  @@map("blog_tags")
+}
+
+model BlogArticle {
+  id              String    @id @default(cuid())
+  title           String
+  slug            String    @unique
+  excerpt         String?
+  content         String
+  author          String?
+  featuredImageUrl String?
+  categoryId      String?
+  seoTitle        String?
+  metaDescription String?
+  canonicalUrl    String?
+  ogImageUrl      String?
+  isPublished     Boolean   @default(false)
+  views           Int       @default(0)
+  publishedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  category BlogCategory?    @relation(fields: [categoryId], references: [id])
+  tags     BlogArticleTag[]
+  faqs     BlogArticleFaq[]
+
+  @@index([categoryId])
+  @@index([isPublished])
+  @@map("blog_articles")
+}
+
+model BlogArticleTag {
+  articleId String
+  tagId     String
+
+  article BlogArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag     BlogTag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@map("blog_article_tags")
+}
+
+model BlogArticleFaq {
+  id        String @id @default(cuid())
+  articleId String
+  question  String
+  answer    String
+  sortOrder Int    @default(0)
+
+  article BlogArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@map("blog_article_faqs")
+}
+
+// ─── Notifications & SMS ─────────────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String
+  entityId  String?
+  isRead    Boolean          @default(false)
+  readById  String?
+  createdAt DateTime         @default(now())
+
+  readBy AdminUser? @relation("ReadByAdmin", fields: [readById], references: [id])
+
+  @@index([isRead])
+  @@index([createdAt])
+  @@map("notifications")
+}
+
+model SmsTemplate {
+  id        String    @id @default(cuid())
+  name      String
+  category  String?
+  body      String
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  @@map("sms_templates")
+}
+
+model SmsLog {
+  id        String    @id @default(cuid())
+  recipient String
+  message   String
+  status    SmsStatus @default(pending)
+  sentAt    DateTime  @default(now())
+
+  @@index([sentAt])
+  @@map("sms_logs")
+}
+
+// ─── Settings ────────────────────────────────────────────────────────────────
+
+model GeneralSettings {
+  id        String   @id @default("default")
+  gymName   String
+  phone     String?
+  email     String?
+  address   String?
+  logoUrl   String?
+  updatedAt DateTime @updatedAt
+
+  @@map("general_settings")
+}
+
+model SocialSettings {
+  id        String   @id @default("default")
+  instagram String?
+  telegram  String?
+  whatsapp  String?
+  youtube   String?
+  updatedAt DateTime @updatedAt
+
+  @@map("social_settings")
+}
+
+model PaymentSettings {
+  id           String   @id @default("default")
+  bankName     String?
+  accountNumber String?
+  cardNumber   String?
+  accountHolder String?
+  instructions String?
+  updatedAt    DateTime @updatedAt
+
+  @@map("payment_settings")
+}
+
+model DeliverySettings {
+  id                   String   @id @default("default")
+  courierFee           Int      @default(0)
+  pickupInstructions   String?
+  deliveryInstructions String?
+  updatedAt            DateTime @updatedAt
+
+  @@map("delivery_settings")
+}
+
+// ─── Misc ────────────────────────────────────────────────────────────────────
+
+model ConsultationRequest {
+  id        String   @id @default(cuid())
+  userId    String?
+  fullName  String
+  mobile    String
+  goal      String?
+  message   String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("consultation_requests")
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  adminId    String?
+  action     AuditAction
+  entity     String
+  entityId   String?
+  changes    Json?
+  createdAt  DateTime    @default(now())
+
+  admin AdminUser? @relation(fields: [adminId], references: [id])
+
+  @@index([createdAt])
+  @@index([entity])
+  @@map("audit_logs")
+}
